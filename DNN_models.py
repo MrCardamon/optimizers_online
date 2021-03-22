@@ -100,16 +100,19 @@ class CNN(nn.Module):
         return out
 
 
-class DenseNet(nn.Module):
+class Full_connect(nn.Module):
     def __init__(self, num_classes):
-        super(DenseNet, self).__init__()
+        super(Full_connect, self).__init__()
         self.fc1 = nn.Linear(784, 1000)
-        self.fc2 = nn.Linear(1000, num_classes)
+        self.fc2 = nn.Linear(1000, 1000)
+        self.fc3 = nn.Linear(1000, num_classes)
 
     def forward(self, x):
         out = self.fc1(x)
         out = F.relu(out)
         out = self.fc2(out)
+        out = F.relu(out)
+        out = self.fc3(out)
         return out
 
 

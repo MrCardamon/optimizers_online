@@ -26,15 +26,23 @@ import os
 import numpy as np
 from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig
 from DNN_models import cifar10_CNN, cifar10_DenseNet, cifar10_ResNet18
-from torchvision.models import resnet18
+from torchvision.models import resnet18, vgg11
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from PIL import Image
 
 # Hyper Parameters
 num_classes = 100
-num_epochs = 20
-batch_size = 60
+num_epochs = input('Please input epochs, 25 for default value')
+if num_epochs == '':
+    num_epochs = 25
+else:
+    num_epochs = int(num_epochs)
+batch_size = input('Please input batch_size, 64 for default value')
+if batch_size == '':
+    batch_size = 64
+else:
+    batch_size = int(batch_size)
 
 #dataset_sign = int(input('Please input a dataset sign, 0 for mnist, 1 for cifar10, 2 for imagenet'))
 model_sign = 2
@@ -88,17 +96,14 @@ train_loader = torch.utils.data.DataLoader(dataset=cifar10_dataset(), batch_size
 test_loader = torch.utils.data.DataLoader(dataset=cifar10_test_dataset(), batch_size=batch_size, shuffle=True)
 
 #testing functon
-def training(model_sign=0, optimizer_sign=0, learning_rate=0.01, momentum=0.9, beta=0.999, alpha=1):
+def training(model_sign=0, optimizer_sign=0, learning_rate=0.01, momentum=0.9, beta=0.99, alpha=1):
     training_data = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
     if model_sign == 0:
-        net = cifar10_DenseNet(num_classes)
-        padding_sign = True
+        net = vgg11(pretrained=False, num_classes=num_classes)
     elif model_sign == 1:
         net = cifar10_CNN(num_classes)
-        padding_sign = False
     elif model_sign == 2:
         net = resnet18(pretrained=False, num_classes=num_classes)
-        padding_sign = False
     else:
         raise ValueError('Not correct model sign')
     if gpu_sign == 1:
@@ -113,49 +118,41 @@ def training(model_sign=0, optimizer_sign=0, learning_rate=0.01, momentum=0.9, b
         optimizer = alpha_optimizers.Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
                                                    momentum=momentum, beta=beta)
     elif optimizer_sign == 1:
-        optimizer = alpha_optimizers.alpha_Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
-                                                         momentum=momentum, beta=beta, alpha=alpha)
+        optimizer = alpha_optimizers.SGD_momentumoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+                                                           momentum=momentum)
     elif optimizer_sign == 2:
-        optimizer = alpha_optimizers.alpha_SGDoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
-                                                        momentum=momentum, alpha=alpha)
-    elif optimizer_sign == 3:
-        optimizer = alpha_optimizers.alpha_ascent_Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
-                                                                momentum=momentum, beta=beta)
-    elif optimizer_sign == 4:
-        optimizer = alpha_optimizers.double_alpha_Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
-                                                                momentum=momentum, beta=beta, alpha=alpha)
-    elif optimizer_sign == 5:
-        optimizer = alpha_optimizers.alpha2ascent_Adamoptimizer(net.parameters(), lr=learning_rate[0],sgd_lr=learning_rate[1], weight_decay=0.0001,
-                                                                momentum=momentum, beta=beta, alpha=alpha)
-    elif optimizer_sign == 6:
-        optimizer = alpha_optimizers.alpha2_SGDoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
-                                                                momentum=momentum, alpha=alpha)
-    elif optimizer_sign == 7:
-        optimizer = alpha_optimizers.SGD_momentumoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001, momentum=momentum)
-    elif optimizer_sign == 8:
-        optimizer = alpha_optimizers.Adam_to_SGDoptimizer(net.parameters(), lr=learning_rate[0], sgd_lr=learning_rate[1], weight_decay=0.0001,
-                                                          momentum=momentum, beta=beta)
-    elif optimizer_sign == 9:
-        optimizer = alpha_optimizers.Adaboundoptimizer(net.parameters(), lr=learning_rate[0],sgd_lr=learning_rate[1], weight_decay=0.0001,
-                                                                momentum=momentum, beta=beta, alpha = alpha)
-    elif optimizer_sign == 10:
-        optimizer = alpha_optimizers.bound_ASGDoptimizer(net.parameters(), lr=learning_rate[0],sgd_lr=learning_rate[1], weight_decay=0.0001,
-                                                       momentum=momentum, beta=beta, alpha = alpha)
-    elif optimizer_sign == 11:
-        optimizer = alpha_optimizers.bound_alpha_adamoptimizer(net.parameters(), lr=learning_rate[0],sgd_lr=learning_rate[1], weight_decay=0.0001,
-                                                               momentum=momentum, beta=beta, alpha = alpha)
-    elif optimizer_sign == 12:
-        optimizer = alpha_optimizers.Global_Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001, momentum=momentum, beta=beta)
-    elif optimizer_sign == 13:
-        optimizer = alpha_optimizers.lb_Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+        optimizer = alpha_optimizers.adadiroptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
                                                    momentum=momentum, beta=beta)
-    elif optimizer_sign == 14:
-        optimizer = alpha_optimizers.lb_SGDoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001, momentum=momentum)
-    elif optimizer_sign == 15:
-        optimizer = alpha_optimizers.alpha2ascent_lbAdamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
-                                                                momentum=momentum, beta=beta, alpha=alpha)
-    elif optimizer_sign == 16:
-        optimizer = alpha_optimizers.direction_Adamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+    elif optimizer_sign == 3:
+        optimizer = alpha_optimizers.D3SGDoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+                                                    momentum=momentum)
+    elif optimizer_sign == 4:
+        optimizer = alpha_optimizers.B3SGDoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+                                                    momentum=momentum)
+    elif optimizer_sign == 5:
+        optimizer = alpha_optimizers.adabssoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+                                                   momentum=momentum, beta=beta)
+    elif optimizer_sign == 6:
+        optimizer = alpha_optimizers.adabssoptimizer1(net.parameters(), lr=learning_rate[0], sgd_lr=learning_rate[1],
+                                                      weight_decay=0.0001, alpha=learning_rate[2], momentum=momentum, beta=beta)
+    elif optimizer_sign == 7:
+        optimizer = alpha_optimizers.adasgdoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
+                                                    momentum=momentum, beta=beta)
+    elif optimizer_sign == 8:
+        optimizer = alpha_optimizers.datsoptimizer(net.parameters(), lr=learning_rate[0], sgd_lr=learning_rate[1],
+                                                   weight_decay=0.0001, momentum=momentum, beta=beta)
+    elif optimizer_sign == 9:
+        optimizer = alpha_optimizers.adatsoptimizer(net.parameters(), lr=learning_rate[0], sgd_lr=learning_rate[1],
+                                                   weight_decay=0.0001, momentum=momentum, beta=beta)
+    elif optimizer_sign == 10:
+        optimizer = alpha_optimizers.adabssoptimizer2(net.parameters(), lr=learning_rate[0], sgd_lr=learning_rate[1],
+                                                      weight_decay=0.0001, alpha=learning_rate[2], momentum=momentum,
+                                                      beta=beta)
+    elif optimizer_sign == 11:
+        optimizer = alpha_optimizers.extractionoptimizer(net.parameters(), lr=learning_rate[0], sgd_lr=learning_rate[1],
+                                                      alpha=learning_rate[2], weight_decay=0.0001, momentum=momentum)
+    elif optimizer_sign == 12:
+        optimizer = alpha_optimizers.signAdamoptimizer(net.parameters(), lr=learning_rate, weight_decay=0.0001,
                                                    momentum=momentum, beta=beta)
     else:
         raise ValueError('Not correct algorithm symbol')
@@ -172,8 +169,9 @@ def training(model_sign=0, optimizer_sign=0, learning_rate=0.01, momentum=0.9, b
             if gpu_sign != 0:
                 images = images.cuda()
                 labels = labels.cuda()
-            labels = Variable(labels).long()
             images = images.float()
+            labels = Variable(labels).long()
+
             # Forward + Backward + Optimize
             optimizer.zero_grad()  # zero the gradient buffer
             outputs = net(images)
@@ -215,32 +213,19 @@ def training(model_sign=0, optimizer_sign=0, learning_rate=0.01, momentum=0.9, b
 
 
 'Algorithms that can be choosed'
-algorithm_labels = ['0.Adam', '1.alpha_adam', '2.alpha_SGD', '3.alpha_ascent_adam', '4.double_alpha_adam',
-                    '5.alpha2ascent_adam', '6.alpha2_SGD', '7.SGD', '8.Adam_to_SGD', '9.adabound',
-                     '10.bound_ASGD', '11.bound_alpha_adam', '12.global_adam', '13.lb_adam', '14.lb_SGD',
-                    '15.alpha2ascent_lbAdam',  '16.direction_Adamoptimizer']
+algorithm_labels = ['0.Adam', '1.SGD', '2.adadir', '3.D3SGD', '4.B3SGD', '5.adabss', '6.adabss1',
+                    '7.adasgd', '8.dats', '9.adats', '10.adabss2', '11.extract', '12.signadam']
 
-task = int(input('please input a task, 0 for algorithm comparing, 1 for learning rate modify, '
-                 '2 for alpha modify \n'))
+task = int(input('please input a task, 0 for algorithm comparing, 1 for learning rate modify, \n'))
 if task == 0:
     test_algorithms = eval(input('please input testing algorithms, only list consist of int(algorithm sign) supported\n'))
     test_algorithms = [int(i) for i in test_algorithms]
     learning_rates = eval(input('please input learning rates, must corresponding to the algorithms \n'))
     if len(test_algorithms) < 1 or len(test_algorithms) != len(learning_rates):
         raise ValueError('lr and algorithms are not corresponding')
-    alphas = eval(input('please input the list of testing alphas correspond to test algorithms \n'))
-    if len(test_algorithms) != len(alphas):
-        raise ValueError('alphas and algorithms are not corresponding')
 elif task == 1:
     test_algorithm = int(input('please input a single algorithm symbol \n'))
     learning_rates = eval(input('please input testing learning rates,only list supported \n'))
-    alphas = eval(input('please input a single alpha list for algorithm 4\n'))
-elif task == 2:
-    test_algorithm = int(input('please input a single algorithm symbol \n'))
-    learning_rates = eval(input('please input learning rates for the algorithm \n'))
-    alphas = eval(input('please input alphas corresponding to learning rates, some algorithms may need to input lists \n'))
-    if len(alphas) != len(learning_rates):
-        raise ValueError('alphas and learning rates are not corresponding')
 else:
     raise ValueError('not correct task symbol')
 repeats = int(input('please input how many times to repeat \n'))
@@ -253,7 +238,7 @@ for i in show_symbol:
         raise  ValueError('incorrect show symbol')
 
 shows = ['acc', 'loss', 'training_err', 'test_acc', 'test_loss']
-models = ['DenseNet', 'CNN', 'ResNet']
+models = ['VGG11', 'CNN', 'ResNet']
 comparing_datas = [[] for i in show_symbol]
 comparing_data = [[] for i in show_symbol]
 test_algorithm_labels = [[] for i in show_symbol]
@@ -261,7 +246,7 @@ if task == 0:
     for i in range(len(test_algorithms)):
         for j in range(repeats):
             output = training(model_sign=model_sign, optimizer_sign=test_algorithms[i],
-                              learning_rate=learning_rates[i],alpha=alphas[i])
+                              learning_rate=learning_rates[i])
             for a in range(len(show_symbol)):
                 if j == 0:
                     if show_symbol[a] == 0:
@@ -288,12 +273,12 @@ if task == 0:
         for a in range(len(show_symbol)):
             comparing_datas[a].append(np.array(comparing_data[a]) / repeats)
             test_algorithm_labels[a].append(
-                algorithm_labels[test_algorithms[i]] + ' learning_rate=' + str(learning_rates[i]) + ' alpha=' + str(alphas[i]))
+                algorithm_labels[test_algorithms[i]] + ' learning_rate=' + str(learning_rates[i]))
 elif task == 1:
     for i in range(len(learning_rates)):
         for j in range(repeats):
             output = training(model_sign=model_sign, optimizer_sign=test_algorithm,
-                              learning_rate=learning_rates[i], alpha=alphas)
+                              learning_rate=learning_rates[i])
             for a in range(len(show_symbol)):
                 if j == 0:
                     if show_symbol[a] == 0:
@@ -320,7 +305,8 @@ elif task == 1:
         for a in range(len(show_symbol)):
             comparing_datas[a].append(np.array(comparing_data[a]) / repeats)
             test_algorithm_labels[a].append(
-                algorithm_labels[test_algorithm] + ' learning_rate=' + str(learning_rates[i]) + 'alpha=' + str(alphas))
+                algorithm_labels[test_algorithm] + ' learning_rate=' + str(learning_rates[i]))
+'''
 elif task == 2:
     for i in range(len(learning_rates)):
         for j in range(repeats):
@@ -354,17 +340,30 @@ elif task == 2:
             comparing_datas[a].append(np.array(comparing_data[a]) / repeats)
             test_algorithm_labels[a].append(
                 algorithm_labels[test_algorithm] + ' learning_rate=' + str(learning_rates[i]) + ' alpha=' + str(alphas[i]))
+'''
 save_sign = 10
-with open('data/expresults/expdata.txt', 'a') as f:
-    f.write('\n\ntiny-imagenet\ntraining epochs:' + str(num_epochs) + 'model_sign:' + str(model_sign))
+write_sign = eval(input('please input wright sign\n'))
+if write_sign == 0:
+    with open('data/expresults/expdatas/expdata.txt', 'a') as f:
+        f.write('\n\nCIFAR10\ntraining epochs:' + str(num_epochs) + 'model_sign:' + str(model_sign))
+        for a in range(len(show_symbol)):
+            f.write('\nshow_symbol:' + str(a))
+            for i in range(len(comparing_datas[a])):
+                f.write('\n' + str(test_algorithm_labels[a][i]))
+                f.write('\n' + str(comparing_datas[a][i]))
+                plt.plot(range(len(comparing_datas[a][i])), comparing_datas[a][i])
+            plt.legend(test_algorithm_labels[a])
+            plt.title(models[model_sign] + ' CIFAR10, ' + shows[show_symbol[a]])
+            plt.savefig('data/matplotlib/' + str(save_sign))
+            save_sign += 1
+            plt.show()
+            plt.cla()
+else:
     for a in range(len(show_symbol)):
-        f.write('\nshow_symbol:' + str(a))
         for i in range(len(comparing_datas[a])):
-            f.write('\n' + str(test_algorithm_labels[a][i]))
-            f.write('\n' + str(comparing_datas[a][i]))
             plt.plot(range(len(comparing_datas[a][i])), comparing_datas[a][i])
         plt.legend(test_algorithm_labels[a])
-        plt.title(models[model_sign] + ' tiny_imagenet, ' + shows[show_symbol[a]])
+        plt.title(models[model_sign] + ', imagenet, ' + shows[show_symbol[a]])
         plt.savefig('data/matplotlib/' + str(save_sign))
         save_sign += 1
         plt.show()
